@@ -3,13 +3,14 @@
 
 # A node structure
 class Node:
-#
-#     # A utility function to create a new node
-#     def __init__(self, key):
-#         self.data = key
-#         self.left = None
-#         self.right = None
-#
+    #
+    #     # A utility function to create a new node
+    def __init__(self, key):
+        self.data = key
+        self.left = None
+        self.right = None
+
+
 #
 # # Function to print level order traversal of tree
 def printLevelOrder(root):
@@ -60,3 +61,4 @@ root.left.right = Node(5)
 print("Level order traversal of binary tree is -")
 printLevelOrder(root)
 
+# This code is contributed by Nikhil Kumar Singh(nickzuck_007)
