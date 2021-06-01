@@ -55,4 +55,3 @@ root.left.right = Node(5)
 
 inOrder(root)
 
-# This code is contributed by Nikhil Kumar Singh(nickzuck_007)
