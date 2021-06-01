@@ -20,5 +20,3 @@ if __name__ == '__main__':
 
     inverse = [(key, value) for key, value in my_dict.items()]
     print(max(inverse))
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
