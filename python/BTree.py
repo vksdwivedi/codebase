@@ -60,4 +60,3 @@ root.left.right = Node(5)
 print("Level order traversal of binary tree is -")
 printLevelOrder(root)
 
-# This code is contributed by Nikhil Kumar Singh(nickzuck_007)
