@@ -1,7 +1,15 @@
 {
+  "pipeline_name": "orders_realtime_lakehouse",
   "source_path": "examples/events.jsonl",
   "lakehouse_root": "lakehouse",
   "checkpoint_path": "checkpoints/local_pipeline.offset",
   "batch_size": 3,
-  "required_fields": ["event_id", "event_type", "event_time", "customer_id", "amount"]
+  "required_fields": ["event_id", "event_type", "event_time", "customer_id", "amount"],
+  "tables": {
+    "bronze_events": "orders_raw",
+    "silver_events": "orders_clean",
+    "silver_rejections": "orders_rejected",
+    "gold_event_summary": "orders_by_event_type",
+    "gold_customer_summary": "orders_by_customer"
+  }
 }
