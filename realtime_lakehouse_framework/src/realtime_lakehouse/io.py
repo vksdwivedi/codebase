@@ -30,20 +30,31 @@ class JsonLinesSource:
 
 
 class JsonLinesSink:
-    """Appends records to medallion-layer JSON Lines files."""
+    """Writes records to medallion-layer JSON Lines files."""
 
     def __init__(self, lakehouse_root: Path) -> None:
         self.lakehouse_root = lakehouse_root
 
     def append(self, layer: str, table: str, records: Iterable[Record]) -> int:
+        """Append records to a table and return the number written."""
+        return self._write(layer=layer, table=table, records=records, mode="a")
+
+    def replace(self, layer: str, table: str, records: Iterable[Record]) -> int:
+        """Replace a table snapshot and return the number written."""
+        return self._write(layer=layer, table=table, records=records, mode="w")
+
+    def path_for(self, layer: str, table: str) -> Path:
+        """Return the file path for a logical layer/table pair."""
+        return self.lakehouse_root / layer / f"{table}.jsonl"
+
+    def _write(self, layer: str, table: str, records: Iterable[Record], mode: str) -> int:
         materialized = list(records)
-        if not materialized:
+        target_file = self.path_for(layer, table)
+        if not materialized and mode == "a":
             return 0
 
-        target_dir = self.lakehouse_root / layer
-        target_dir.mkdir(parents=True, exist_ok=True)
-        target_file = target_dir / f"{table}.jsonl"
-        with target_file.open("a", encoding="utf-8") as stream:
+        target_file.parent.mkdir(parents=True, exist_ok=True)
+        with target_file.open(mode, encoding="utf-8") as stream:
             for record in materialized:
                 stream.write(json.dumps(record, sort_keys=True) + "\n")
         return len(materialized)

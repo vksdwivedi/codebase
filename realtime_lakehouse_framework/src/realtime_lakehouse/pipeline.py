@@ -6,7 +6,7 @@ from dataclasses import asdict
 
 from realtime_lakehouse.checkpoint import FileCheckpointStore
 from realtime_lakehouse.config import PipelineConfig
-from realtime_lakehouse.gold import EventTypeAggregator
+from realtime_lakehouse.gold import GoldAggregateBuilder
 from realtime_lakehouse.io import JsonLinesSink, JsonLinesSource
 from realtime_lakehouse.models import PipelineMetrics
 from realtime_lakehouse.quality import QualityRuleSet
@@ -20,32 +20,53 @@ class LakehousePipeline:
         self.source = JsonLinesSource(config.source_path)
         self.sink = JsonLinesSink(config.lakehouse_root)
         self.checkpoints = FileCheckpointStore(config.checkpoint_path)
-        self.quality_rules = QualityRuleSet(config.required_fields)
-        self.aggregator = EventTypeAggregator()
+        self.quality_rules = QualityRuleSet(config)
+        self.aggregates = GoldAggregateBuilder(config)
 
     def run_once(self) -> PipelineMetrics:
         """Process a single micro-batch and commit the source offset."""
-        offset = self.checkpoints.load()
-        records, next_offset = self.source.read_batch(offset=offset, limit=self.config.batch_size)
-
-        metrics = PipelineMetrics(consumed=len(records))
+        start_offset = self.checkpoints.load()
+        records, end_offset = self.source.read_batch(offset=start_offset, limit=self.config.batch_size)
+        metrics = PipelineMetrics(
+            pipeline_name=self.config.pipeline_name,
+            consumed=len(records),
+            start_offset=start_offset,
+            end_offset=end_offset,
+            output_tables=self._output_tables(),
+        )
         if not records:
             return metrics
 
-        metrics.bronze_written = self.sink.append("bronze", "events_raw", records)
-        accepted, rejected = self.quality_rules.validate(records)
-        metrics.silver_written = self.sink.append("silver", "events_clean", accepted)
+        tables = self.config.tables
+        metrics.bronze_written = self.sink.append("bronze", tables.bronze_events, records)
+
+        validated = self.quality_rules.validate(records)
+        metrics.silver_written = self.sink.append("silver", tables.silver_events, validated.accepted)
         metrics.rejected = self.sink.append(
             "silver",
-            "events_rejected",
-            [asdict(item) for item in rejected],
+            tables.silver_rejections,
+            [asdict(item) for item in validated.rejected],
         )
 
-        gold_records = self.aggregator.build(accepted)
-        metrics.gold_written = self.sink.append("gold", "event_type_counts", gold_records)
+        event_type_summary = self.aggregates.by_event_type(validated.accepted)
+        customer_summary = self.aggregates.by_customer(validated.accepted)
+        metrics.gold_written = self.sink.replace("gold", tables.gold_event_summary, event_type_summary)
+        metrics.gold_written += self.sink.replace("gold", tables.gold_customer_summary, customer_summary)
         metrics.aggregate_counts = {
-            str(record["event_type"]): int(record["event_count"])
-            for record in gold_records
+            str(record[self.config.event_type_field]): int(record["event_count"])
+            for record in event_type_summary
         }
-        self.checkpoints.commit(next_offset)
+
+        self.checkpoints.commit(end_offset)
         return metrics
+
+    def _output_tables(self) -> dict[str, str]:
+        tables = self.config.tables
+        layer_tables = {
+            "bronze_events": ("bronze", tables.bronze_events),
+            "silver_events": ("silver", tables.silver_events),
+            "silver_rejections": ("silver", tables.silver_rejections),
+            "gold_event_summary": ("gold", tables.gold_event_summary),
+            "gold_customer_summary": ("gold", tables.gold_customer_summary),
+        }
+        return {name: str(self.sink.path_for(layer, table)) for name, (layer, table) in layer_tables.items()}
