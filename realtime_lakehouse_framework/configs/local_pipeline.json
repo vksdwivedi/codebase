@@ -1,0 +1,7 @@
+{
+  "source_path": "examples/events.jsonl",
+  "lakehouse_root": "lakehouse",
+  "checkpoint_path": "checkpoints/local_pipeline.offset",
+  "batch_size": 3,
+  "required_fields": ["event_id", "event_type", "event_time", "customer_id", "amount"]
+}

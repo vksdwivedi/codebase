@@ -1,0 +1,4 @@
+{"event_id":"evt-001","event_type":"order_created","event_time":"2026-05-13T00:00:01Z","customer_id":"cust-001","amount":19.99}
+{"event_id":"evt-002","event_type":"order_created","event_time":"2026-05-13T00:00:03Z","customer_id":"cust-002","amount":42.50}
+{"event_id":"evt-003","event_type":"order_cancelled","event_time":"2026-05-13T00:00:07Z","customer_id":"cust-001","amount":19.99}
+{"event_id":"evt-004","event_type":"order_created","event_time":"2026-05-13T00:00:10Z","customer_id":"cust-003","amount":7.25}
